@@ -106,7 +106,7 @@ def process_excel_row(row, file_content, api_url, api_auth):
         }
         payload = {
             "response_mode": "blocking",
-            "user": "hahahahaha",
+            "user": "haha-shareholder",
             "inputs": {
                 "Query": query_json,  # 注意这里保持字符串形式
                 "File": file_content
@@ -122,22 +122,27 @@ def process_excel_row(row, file_content, api_url, api_auth):
         response.raise_for_status()
 
         # 解析响应
-        result_json = None
-        for line in response.iter_lines():
-            if b'"event": "workflow_finished"' in line:
-                result_data = json.loads(line.decode().split('data: ')[1])
-                answer = result_data['data']['outputs']['Answer']
+        result_json = response.json()
+        # for line in response.iter_lines():
+        #     if b'"event": "workflow_finished"' in line:
+        #         result_data = json.loads(line.decode().split('data: ')[1])
+        #         answer = result_data['data']['outputs']['Answer']
+        #
+        #         # 提取json内容
+        #         json_match = re.search(r'```json\n(.*?)\n```', answer, re.DOTALL)
+        #         if json_match:
+        #             result_json = json.loads(json_match.group(1))
+        #         break
+        answer = result_json['data']['outputs']['Answer']
+        json_match = re.search(r'```json(.*?)```', answer, re.DOTALL)
+        if not json_match:
+            raise ValueError("未找到有效JSON数据")
 
-                # 提取json内容
-                json_match = re.search(r'```json\n(.*?)\n```', answer, re.DOTALL)
-                if json_match:
-                    result_json = json.loads(json_match.group(1))
-                break
-
+        result = json.loads(json_match.group(1).strip())
         return {
-            '概括总结': result_json.get('概括总结', '未提取'),
-            '条款编号': result_json.get('条款编号', '未提取'),
-            '条款原文': result_json.get('条款原文', '未提取'),
+            '概括总结': result.get('概括总结', '未提取'),
+            '条款编号': result.get('条款编号', '未提取'),
+            '条款原文': result.get('条款原文', '未提取'),
             'error': ''
         }
     except Exception as e:
